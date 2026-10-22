@@ -1,0 +1,200 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "postgresql"
+}
+enum Role {
+  CONSUMER
+  ADMIN
+  SUPER_ADMIN
+}
+enum Verdict {
+  GENUINE
+  SUSPICIOUS
+  COUNTERFEIT
+  UNKNOWN
+}
+enum AlertStatus {
+  NEW
+  INVESTIGATING
+  RESOLVED
+}
+model User {
+  id String @id @db.Uuid
+  role Role @default(CONSUMER)
+  name String?
+  createdAt DateTime @default(now())
+  scans Scan[]
+  transactions RewardTransaction[]
+  claims RewardClaim[]
+  redemptions Redemption[]
+}
+model Product {
+  id String @id @default(uuid()) @db.Uuid
+  gtin String @unique
+  name String
+  brand String
+  category String?
+  referenceImages String[] @default([])
+  attributes Json @default("{}")
+  status String @default("ACTIVE")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  codes IssuedCode[]
+  scans Scan[]
+}
+model IssuedCode {
+  id String @id @default(uuid()) @db.Uuid
+  productId String @db.Uuid
+  serial String
+  batch String?
+  status String @default("ACTIVE")
+  firstScannedAt DateTime?
+  scanCount Int @default(0)
+  createdAt DateTime @default(now())
+  product Product @relation(fields: [productId], references: [id])
+  @@unique([productId, serial])
+  @@index([serial])
+}
+model Scan {
+  id String @id @default(uuid()) @db.Uuid
+  userId String? @db.Uuid
+  guestHash String?
+  requestKey String @unique
+  codeKey String
+  gtin String
+  serial String?
+  batch String?
+  productId String? @db.Uuid
+  verdict Verdict
+  riskScore Int
+  reasons Json
+  engineVersion String @default("1.0")
+  locationConsent Boolean @default(false)
+  consentVersion String @default("2026-10-05")
+  lat Float?
+  lng Float?
+  accuracyM Float?
+  city String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user User? @relation(fields: [userId], references: [id])
+  product Product? @relation(fields: [productId], references: [id])
+  analyses PackagingAnalysis[]
+  reports Report[]
+  alertMemberships AlertScan[]
+  @@index([userId, createdAt])
+  @@index([guestHash, createdAt])
+  @@index([codeKey, createdAt])
+  @@index([verdict, createdAt])
+  @@index([productId])
+}
+model PackagingAnalysis {
+  id String @id @default(uuid()) @db.Uuid
+  scanId String @db.Uuid
+  imagePaths String[]
+  authenticityScore Float
+  confidence Float
+  findings String[]
+  model String
+  status String @default("COMPLETE")
+  createdAt DateTime @default(now())
+  scan Scan @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  @@index([scanId, createdAt])
+}
+model Report {
+  id String @id @default(uuid()) @db.Uuid
+  scanId String @db.Uuid
+  reporterKey String
+  reason String
+  status String @default("PENDING")
+  createdAt DateTime @default(now())
+  scan Scan @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  @@unique([scanId, reporterKey])
+}
+model Alert {
+  id String @id @default(uuid()) @db.Uuid
+  centerLat Float
+  centerLng Float
+  radiusKm Float
+  productIds String[] @default([])
+  severity String
+  status AlertStatus @default(NEW)
+  assigneeId String? @db.Uuid
+  notes String @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  scans AlertScan[]
+  @@index([status, createdAt])
+}
+model AlertScan {
+  alertId String @db.Uuid
+  scanId String @db.Uuid
+  alert Alert @relation(fields: [alertId], references: [id], onDelete: Cascade)
+  scan Scan @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  @@id([alertId, scanId])
+  @@index([scanId])
+}
+model RewardClaim {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  codeKey String
+  scanId String @db.Uuid
+  createdAt DateTime @default(now())
+  user User @relation(fields: [userId], references: [id])
+  @@unique([userId, codeKey])
+  @@index([userId, createdAt])
+}
+model RewardTransaction {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  points Int
+  reason String
+  scanId String? @db.Uuid
+  eventKey String @unique
+  createdAt DateTime @default(now())
+  user User @relation(fields: [userId], references: [id])
+  @@index([userId, createdAt])
+}
+model RewardItem {
+  id String @id @default(uuid()) @db.Uuid
+  name String
+  description String
+  pointsCost Int
+  stock Int?
+  active Boolean @default(true)
+  createdAt DateTime @default(now())
+  redemptions Redemption[]
+}
+model Redemption {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  rewardId String @db.Uuid
+  requestKey String @unique
+  pointsCost Int
+  status String @default("PENDING")
+  createdAt DateTime @default(now())
+  user User @relation(fields: [userId], references: [id])
+  reward RewardItem @relation(fields: [rewardId], references: [id])
+  @@index([rewardId])
+  @@index([userId])
+}
+model Setting {
+  key String @id
+  value Json
+  updatedAt DateTime @updatedAt
+}
+model AuditEvent {
+  id String @id @default(uuid()) @db.Uuid
+  actorId String @db.Uuid
+  action String
+  entityId String?
+  details Json @default("{}")
+  createdAt DateTime @default(now())
+}
+model RateLimit {
+  key String @id
+  count Int @default(0)
+  expiresAt DateTime
+}

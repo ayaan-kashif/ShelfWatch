@@ -1,0 +1,52 @@
+{
+  "name": "shelfwatch",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3001",
+    "build": "prisma generate && next build",
+    "start": "next start -p 3001",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/*.test.ts",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate deploy",
+    "db:studio": "prisma studio",
+    "db:tls-check": "tsx scripts/tls-probe.ts",
+    "whatsapp": "node --conditions=react-server --env-file-if-exists=.env.local --import tsx whatsapp/bot.mts"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "7.10.1",
+    "@prisma/client": "7.10.1",
+    "@supabase/server": "^1.9.0",
+    "@supabase/ssr": "^0.8.0",
+    "@supabase/supabase-js": "^2.99.0",
+    "@zxing/browser": "^0.1.5",
+    "baileys": "7.0.0-rc14",
+    "leaflet": "^1.9.4",
+    "leaflet.heat": "^0.2.0",
+    "lucide-react": "^0.577.0",
+    "next": "16.4.2",
+    "pg": "^8.16.3",
+    "qrcode-terminal": "0.12.0",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "server-only": "^0.0.1",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@types/leaflet": "^1.9.21",
+    "@types/leaflet.heat": "^0.2.5",
+    "@types/node": "^22",
+    "@types/pg": "^8.15.5",
+    "@types/qrcode-terminal": "0.12.2",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.4.2",
+    "prisma": "7.10.1",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.3"
+  }
+}

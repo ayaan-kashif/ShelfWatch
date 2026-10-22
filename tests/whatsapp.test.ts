@@ -1,0 +1,10 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { detectLocale, helpText, parseCommand, resultText, senderKey } from "../src/lib/whatsapp/messages";
+
+test("bare codes and check commands become verification requests",()=>{assert.deepEqual(parseCommand("8964000123456"),{kind:"check",gtin:"8964000123456"});assert.deepEqual(parseCommand("check 0001234 SN-9 B42"),{kind:"check",gtin:"0001234",serial:"SN-9",batch:"B42"});assert.deepEqual(parseCommand("  جانچ   8964000123456 "),{kind:"check",gtin:"8964000123456"});});
+test("greetings and keywords return help or information",()=>{for(const word of ["hi","HELP","menu","","مدد","سلام"])assert.equal(parseCommand(word).kind,"help");assert.equal(parseCommand("how does it work").kind,"how");assert.equal(parseCommand("privacy").kind,"privacy");});
+test("free text and malformed codes are rejected, not verified",()=>{for(const text of ["is this real?","abc","1 2 3 4 5","code <script>"])assert.equal(parseCommand(text).kind,"invalid");});
+test("sender hashes are salted and never contain the number",()=>{const jid="923001234567@s.whatsapp.net";const a=senderKey(jid,"salt-one-xxxxxxxx"),b=senderKey(jid,"salt-two-xxxxxxxx");assert.notEqual(a,b);assert.doesNotMatch(a,/923001234567/);assert.equal(a,senderKey(jid,"salt-one-xxxxxxxx"));});
+test("Urdu messages get Urdu replies",()=>{assert.equal(detectLocale("مدد"),"ur");assert.equal(detectLocale("help"),"en");assert.match(helpText("ur"),/شیلف واچ/);});
+test("an unknown result says it is not counterfeit evidence and translates engine reasons",()=>{const en=resultText({verdict:"UNKNOWN",reasons:[{message:"This barcode is not in the brand registry. Authenticity cannot be established."}]},"en","https://s.example/");assert.match(en,/UNKNOWN/);assert.match(en,/Unregistered product/);assert.match(en,/cannot prove/);assert.match(en,/https:\/\/s.example\/scan/);const ur=resultText({verdict:"UNKNOWN",reasons:[{message:"This barcode is not in the brand registry. Authenticity cannot be established."}]},"ur");assert.match(ur,/نامعلوم/);assert.match(ur,/رجسٹری/);});

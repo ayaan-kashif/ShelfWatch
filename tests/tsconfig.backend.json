@@ -1,0 +1,1 @@
+{"extends":"../tsconfig.json","compilerOptions":{"incremental":false},"include":["../src/lib/**/*.ts","../src/app/api/**/*.ts","../src/proxy.ts","../prisma.config.ts","../whatsapp/*.mts","../scripts/*.ts","./*.test.ts"],"exclude":["../node_modules"]}

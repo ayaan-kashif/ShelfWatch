@@ -1,0 +1,64 @@
+import { chromium } from '@playwright/test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+const base='http://localhost:3001', results=[];
+const browser=await chromium.launch({executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',headless:true});
+const context=await browser.newContext({viewport:{width:1440,height:1100},reducedMotion:'reduce'});
+const page=await context.newPage(), errors=[];page.on('pageerror',e=>errors.push(e.message));
+try{
+ await fs.mkdir('test-results',{recursive:true});
+ await page.goto(base+'/dashboard',{waitUntil:'networkidle'});
+ await page.getByRole('heading',{name:'A little more confidence, every day.'}).waitFor();
+ assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+ await page.screenshot({path:'test-results/overview-desktop.png',fullPage:true});
+ results.push('Desktop overview renders without horizontal overflow.');
+ await page.getByRole('link',{name:'Scan a product',exact:true}).first().click();
+ await page.getByLabel('Barcode or product code').waitFor();
+ const setup=await page.request.get(base+'/api/overview');
+ if(setup.status()===503){
+  assert.ok(['SETUP_REQUIRED','DATABASE_UNAVAILABLE'].includes((await setup.json()).code));
+  results.push('Unavailable database reports an explicit setup/service error.');
+ }else{
+  assert.equal(setup.status(),200); const data=await setup.json();
+  assert.equal(typeof data.totalScans,'number');assert.ok(Array.isArray(data.recentScans));
+  for(const route of ['/api/history','/api/rewards'])assert.equal((await page.request.get(base+route)).status(),200);
+  results.push('Connected overview, history and rewards return database-backed responses.');
+ }
+ const invalid=await page.request.post(base+'/api/scan',{data:{gtin:'1',locationConsent:false}});assert.equal(invalid.status(),400);
+ results.push('Malformed barcode input is rejected before creating a scan.');
+ const adminApi=await page.request.get(base+'/api/admin/products');assert.equal(adminApi.status(),401);
+ const redemption=await page.request.post(base+'/api/rewards/redeem',{data:{rewardId:'00000000-0000-4000-8000-000000000001'}});assert.equal(redemption.status(),401);
+ results.push('Anonymous callers cannot manage the registry or redeem rewards.');
+ await page.getByRole('button',{name:'Open camera',exact:true}).click();
+ await page.getByRole('alert').filter({hasText:/camera/i}).first().waitFor({timeout:15000});
+ results.push('Camera unavailable path keeps manual verification accessible.');
+ await page.screenshot({path:'test-results/scan-desktop.png',fullPage:true});
+ await page.goto(base+'/admin',{waitUntil:'networkidle'});
+ assert.equal(await page.locator('form').count(),0);
+ results.push('Admin management is gated without a connected authorized account.');
+ const mutation=await page.request.post(base+'/api/scan',{headers:{origin:'https://untrusted.example'},data:{gtin:'12345678',locationConsent:false}});assert.equal(mutation.status(),403);
+ results.push('Cross-origin mutation guard rejects requests.');
+ await page.setViewportSize({width:375,height:900});
+ await page.goto(base+'/dashboard',{waitUntil:'networkidle'});
+ assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+ await page.screenshot({path:'test-results/overview-mobile.png',fullPage:true});
+ await page.getByRole('button',{name:'Open navigation',exact:true}).click();
+ await page.keyboard.press('Shift+Tab');
+ assert.equal(await page.locator('.sidebar a').last().evaluate(el=>el===document.activeElement),true);
+ await page.keyboard.press('Escape');
+ assert.equal(await page.getByRole('button',{name:'Open navigation',exact:true}).getAttribute('aria-expanded'),'false');
+ assert.equal(await page.getByRole('button',{name:'Open navigation',exact:true}).evaluate(el=>el===document.activeElement),true);
+ await page.getByRole('button',{name:'Open navigation',exact:true}).click();
+ await page.getByRole('link',{name:'Rewards',exact:true}).click();
+ await page.getByRole('heading',{level:1}).waitFor();
+ assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+ results.push('375px layout, navigation, keyboard focus trap and Escape restore work.');
+ await page.goto(base+'/scan',{waitUntil:'networkidle'});
+ assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+ await page.screenshot({path:'test-results/scan-mobile.png',fullPage:true});
+ results.push('Mobile scanner forms render without overflow.');
+ assert.deepEqual(errors,[]);
+ results.push('No uncaught browser errors during tested flows.');
+ console.log(JSON.stringify({passed:results,errors},null,2));
+ await fs.writeFile('test-results/browser-smoke.json',JSON.stringify({passed:results,errors},null,2));
+}finally{await browser.close();}

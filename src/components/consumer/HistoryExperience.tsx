@@ -1,0 +1,23 @@
+"use client";
+import Link from "next/link";
+import { useState } from "react";
+import { ArrowLeft, ArrowRight, Barcode, History, ScanLine, Search } from "lucide-react";
+import { useT } from "../i18n";
+import { Heading, Scan, ServiceState, VerdictBadge, brandName, dateLabel, productName, useRemote } from "./shared";
+
+type HistoryData = { scans: Scan[]; total: number; page: number; pageSize: number };
+export function HistoryExperience() {
+  const t = useT();
+  const [query, setQuery] = useState("");
+  const [search, setSearch] = useState("");
+  const [verdict, setVerdict] = useState("ALL");
+  const [page, setPage] = useState(1);
+  const remote = useRemote<HistoryData>(`/api/history?page=${page}&pageSize=30&search=${encodeURIComponent(search)}&verdict=${verdict}`);
+  const scans = remote.data?.scans || [];
+  const total = remote.data?.total ?? scans.length;
+  const pages = Math.max(1, Math.ceil(total / (remote.data?.pageSize || 30)));
+  const filtering = !!search || verdict !== "ALL";
+  return <><Heading eyebrow={t("A LITTLE MORE CONFIDENCE, EVERY TIME")} title={t("Your scan journal.")} description={t("Every product you’ve checked, with the reasons behind each result.")} action={<Link className="button primary" href="/scan"><ScanLine size={17} aria-hidden="true" /> {t("Scan product")}</Link>} />
+  <form className="consumer-filter" onSubmit={event => { event.preventDefault(); setSearch(query.trim()); setPage(1); }}><div className="consumer-search"><label className="sr-only" htmlFor="history-search">{t("Search your scans by product or code")}</label><Search size={18} aria-hidden="true" /><input className="input" id="history-search" placeholder={t("Search product or code…")} value={query} onChange={event => setQuery(event.target.value)} maxLength={128} /></div><label className="sr-only" htmlFor="history-verdict">{t("Filter by result")}</label><select className="input" id="history-verdict" value={verdict} onChange={event => { setVerdict(event.target.value); setPage(1); }}><option value="ALL">{t("All results")}</option><option value="GENUINE">{t("Genuine")}</option><option value="SUSPICIOUS">{t("Suspicious")}</option><option value="COUNTERFEIT">{t("Counterfeit")}</option><option value="UNKNOWN">{t("Unknown")}</option></select><button className="button secondary" type="submit"><Search size={16} aria-hidden="true" /> {t("Search")}</button></form>
+  <ServiceState {...remote} />{remote.data && !remote.error && <>{scans.length > 0 ? <><div className="consumer-inline-heading"><span className="consumer-muted" style={{ fontSize: 13 }}>{t(filtering ? "{count} scans matching your filters" : "{count} scans in your journal", { count: total })}</span><span className="consumer-privacy-pill">{t("Private scan history")}</span></div><div className="consumer-history-list">{scans.map(scan => <Link className="consumer-history-item" key={scan.id} href={`/scan/${encodeURIComponent(scan.id)}`}><div className="consumer-history-icon"><Barcode size={24} aria-hidden="true" /></div><div className="consumer-history-copy"><h2>{t(productName(scan))}</h2><p>{brandName(scan.product) && <span>{brandName(scan.product)}</span>}<span>{scan.gtin || scan.barcode}</span><span>{dateLabel(scan.createdAt)}</span></p></div><VerdictBadge verdict={scan.verdict || scan.status} /><ArrowRight size={17} aria-hidden="true" /></Link>)}</div>{pages > 1 && <nav className="consumer-actions consumer-section" aria-label={t("Scan history pages")}><button className="button secondary" disabled={page <= 1} onClick={() => setPage(value => value - 1)}><ArrowLeft size={16} aria-hidden="true" /> {t("Previous")}</button><span className="consumer-muted" style={{ fontSize: 13 }}>{t("Page {page} of {pages}", { page, pages })}</span><button className="button secondary" disabled={page >= pages} onClick={() => setPage(value => value + 1)}>{t("Next")} <ArrowRight size={16} aria-hidden="true" /></button></nav>}</> : filtering ? <div className="panel consumer-empty"><Search size={34} aria-hidden="true" /><h2>{t("No matching scans")}</h2><p>{t("Try a different product name or clear your filters.")}</p><button className="button secondary" onClick={() => { setQuery(""); setSearch(""); setVerdict("ALL"); setPage(1); }}>{t("Clear filters")}</button></div> : <div className="panel consumer-empty"><History size={38} strokeWidth={1.4} aria-hidden="true" /><h2>{t("Your first check starts here")}</h2><p>{t("Scan a product and its verification details will be saved in your journal.")}</p><Link href="/scan" className="button primary"><ScanLine size={17} aria-hidden="true" /> {t("Scan your first product")} <ArrowRight size={16} aria-hidden="true" /></Link></div>}</>}</>;
+}

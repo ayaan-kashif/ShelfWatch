@@ -1,0 +1,9 @@
+"use client";
+import { useState } from "react";
+import { Upload } from "lucide-react";
+import { Feedback, request, useSave } from "./shared";
+export default function ReferenceUploader({ remaining, onPaths }: { remaining: number; onPaths: (paths: string[]) => void }) {
+  const [photos, setPhotos] = useState<File[]>([]); const saving = useSave();
+  async function upload() { await saving.save(async () => { if (photos.length < 1 || photos.length > 3) throw new Error("Choose one to three photos per upload."); if (photos.length > remaining) throw new Error("A product supports up to six reference images. Remove a path before adding more."); if (photos.some(photo => photo.size > 5 * 1024 * 1024 || !["image/jpeg", "image/png", "image/webp"].includes(photo.type))) throw new Error("Use JPG, PNG, or WebP photos under 5 MB each."); const body = new FormData(); for (const photo of photos) body.append("photos", photo); const result = await request<{ paths: string[] }>("/api/admin/reference-images", { method: "POST", body }); onPaths(result.paths); setPhotos([]); }, "Photos uploaded. Save the product to attach its reference images."); }
+  return <div className="ad-upload"><Feedback {...saving} /><label className="ad-field"><span>Upload reference packaging photos</span><input className="input" type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={e => { setPhotos(Array.from(e.target.files || [])); saving.clear(); }} /><small>Choose one to three JPG, PNG, or WebP photos under 5 MB each. Photos stay in private storage.</small></label><button className="button secondary" type="button" style={{ marginTop: 14 }} onClick={upload} disabled={!photos.length || saving.busy || remaining === 0}><Upload size={16} aria-hidden="true" />{saving.busy ? "Uploading…" : "Upload references"}</button></div>;
+}

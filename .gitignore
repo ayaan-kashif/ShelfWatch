@@ -1,0 +1,12 @@
+node_modules/
+.next/
+.env
+.env.*
+!.env.example
+src/generated/
+*.tsbuildinfo
+*.log
+test-results/
+
+# WhatsApp bot session keys (secret)
+whatsapp/.auth/
