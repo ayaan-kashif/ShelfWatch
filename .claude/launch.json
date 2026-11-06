@@ -1,6 +1,7 @@
 {
   "version": "0.0.1",
   "configurations": [
-    { "name": "shelfwatch-prod", "runtimeExecutable": "npm", "runtimeArgs": ["run", "start"], "port": 3001 }
+    { "name": "shelfwatch-prod", "runtimeExecutable": "npm", "runtimeArgs": ["run", "start"], "port": 3001 },
+    { "name": "shelfwatch-dev", "runtimeExecutable": "npx", "runtimeArgs": ["next", "dev", "-p", "3002"], "port": 3002 }
   ]
 }

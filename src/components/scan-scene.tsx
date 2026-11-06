@@ -1,5 +1,45 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
-import { ScanLine, Fingerprint, Sparkles, Pause, Play, ShieldCheck } from "lucide-react";
-export function ScanScene({compact=false}:{compact?:boolean}){const ref=useRef<HTMLDivElement>(null);const[paused,setPaused]=useState(false);useEffect(()=>{const node=ref.current;if(!node)return;const observer=new IntersectionObserver(([entry])=>{node.dataset.active=String(entry.isIntersecting&&!document.hidden);});observer.observe(node);const visibility=()=>{node.dataset.active=String(!document.hidden);};document.addEventListener("visibilitychange",visibility);return()=>{observer.disconnect();document.removeEventListener("visibilitychange",visibility);};},[]);
-return <div ref={ref} className={`scan-art ${compact?"is-compact":""} ${paused?"is-paused":""}`} onPointerMove={event=>{if(matchMedia("(prefers-reduced-motion: reduce)").matches||document.documentElement.dataset.motion==="reduced")return;const box=event.currentTarget.getBoundingClientRect();event.currentTarget.style.setProperty("--pointer-x",`${(event.clientX-box.left-box.width/2)/35}deg`);event.currentTarget.style.setProperty("--pointer-y",`${-(event.clientY-box.top-box.height/2)/45}deg`);}} onPointerLeave={event=>{event.currentTarget.style.setProperty("--pointer-x","0deg");event.currentTarget.style.setProperty("--pointer-y","0deg");}}><div className="art-grid" aria-hidden="true"/><div className="art-glow" aria-hidden="true"/><div className="art-ring ring-a" aria-hidden="true"/><div className="art-ring ring-b" aria-hidden="true"/><div className="art-orbit" aria-hidden="true"><i/><i/></div><div className="art-perspective" aria-hidden="true"><div className="art-package"><div className="package-front"><div className="pack-top"><ScanLine size={24}/><span>SHELFWATCH</span></div><div className="pack-label"><span>EVERY DETAIL</span><strong>matters.</strong><div className="pack-symbol"><ShieldCheck size={55} strokeWidth={1.25}/></div><span>LOOK A LITTLE CLOSER.</span></div><div className="pack-barcode"/><span className="pack-foot">PRODUCT ILLUSTRATION / NOT A RESULT</span></div><div className="package-side"><ScanLine size={27}/><span>KNOW WHAT YOU BUY.</span></div><div className="package-top"/></div></div><div className="art-shadow" aria-hidden="true"/><div className="art-sweep" aria-hidden="true"/><div className="art-chip chip-code"><span><Fingerprint size={20}/></span><div><small>01 / THE FIRST SIGNAL</small><strong>Unique code check</strong></div></div><div className="art-chip chip-photo"><span><Sparkles size={20}/></span><div><small>02 / A CLOSER LOOK</small><strong>Packaging intelligence</strong></div></div><div className="art-corner c-tl" aria-hidden="true"/><div className="art-corner c-tr" aria-hidden="true"/><div className="art-corner c-bl" aria-hidden="true"/><div className="art-corner c-br" aria-hidden="true"/><div className="art-caption"><span><i/> Verification, illustrated</span><button onClick={()=>setPaused(!paused)} aria-label={paused?"Play illustration animation":"Pause illustration animation"} aria-pressed={paused}>{paused?<Play size={15}/>:<Pause size={15}/>}</button></div></div>;}
+import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { Fingerprint, Camera, Globe2, Pause, Play } from "lucide-react";
+import { useT } from "./i18n";
+import { prefersStillMotion } from "./motion";
+
+// Decorative bar pattern only; it does not encode a real product code.
+const bars = [3, 1, 2, 1, 4, 1, 1, 3, 2, 1, 1, 2, 3, 1, 2, 4, 1, 1, 2, 1, 3, 2, 1, 1, 4, 2, 1, 3, 1, 1, 2, 3, 1, 2, 1, 4, 1, 2, 1, 1, 3, 1, 2];
+const stamps = [{ icon: Fingerprint, label: "Unique code check" }, { icon: Camera, label: "Packaging evidence" }, { icon: Globe2, label: "Community signals" }];
+
+export function ScanScene({ compact = false }: { compact?: boolean }) {
+  const t = useT();
+  const ref = useRef<HTMLDivElement>(null);
+  const [paused, setPaused] = useState(false);
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    const observer = new IntersectionObserver(([entry]) => { node.dataset.active = String(entry.isIntersecting && !document.hidden); });
+    observer.observe(node);
+    const visibility = () => { node.dataset.active = String(!document.hidden); };
+    document.addEventListener("visibilitychange", visibility);
+    return () => { observer.disconnect(); document.removeEventListener("visibilitychange", visibility); };
+  }, []);
+  return <div ref={ref} data-progress className={`tag-scene ${compact ? "is-compact" : ""} ${paused ? "is-paused" : ""}`}
+    onPointerMove={event => {
+      if (prefersStillMotion()) return;
+      const box = event.currentTarget.getBoundingClientRect();
+      event.currentTarget.style.setProperty("--pointer-x", `${(event.clientX - box.left - box.width / 2) / 40}deg`);
+      event.currentTarget.style.setProperty("--pointer-y", `${-(event.clientY - box.top - box.height / 2) / 50}deg`);
+    }}
+    onPointerLeave={event => { event.currentTarget.style.setProperty("--pointer-x", "0deg"); event.currentTarget.style.setProperty("--pointer-y", "0deg"); }}>
+    <div className="tag-grid" aria-hidden="true" />
+    <div className="tag-tilt" aria-hidden="true">
+      <div className="tag-card">
+        <span className="tag-hole" />
+        <div className="tag-head"><span>SHELFWATCH</span><span>SPECIMEN</span></div>
+        <strong className="tag-name">Every detail<br />matters.</strong>
+        <div className="tag-barcode">{bars.map((width, index) => <i key={index} style={{ "--w": width, "--i": index } as CSSProperties} />)}<span className="tag-beam" /></div>
+        <div className="tag-foot"><span>ILLUSTRATION</span><span>NOT A RESULT</span></div>
+      </div>
+      {stamps.map(({ icon: Icon, label }, index) => <div key={label} className={`tag-stamp stamp-${index + 1}`}><Icon size={17} strokeWidth={1.8} /><span><small>0{index + 1}</small>{t(label)}</span></div>)}
+    </div>
+    <div className="tag-caption"><span><i /> {t("Verification, illustrated")}</span><button type="button" onClick={() => setPaused(!paused)} aria-label={paused ? "Play illustration animation" : "Pause illustration animation"} aria-pressed={paused}>{paused ? <Play size={15} /> : <Pause size={15} />}</button></div>
+  </div>;
+}

@@ -99,3 +99,11 @@ Fresh Supabase connection strings; OpenAI key and model; domain, hosting and `NE
 - Known issue: on Windows, the Prisma CLI (`prisma migrate status/deploy`) ignores `sslrootcert` and fails with P1011 (root not trusted). Either trust the Supabase root in the Windows current-user store (`certutil -user -addstore Root certs\supabase-root-2021.crt`, the owner's choice) or run migrations from Linux/CI. The app runtime is unaffected.
 - The maintenance job was not run against live data: it permanently deletes data. Run it only after setting `CRON_SECRET` and reviewing `retentionDays`.
 - First administrator: the only Auth account (confirmed email, created 2026-10-05) was promoted to SUPER_ADMIN by its exact UUID at the owner's request, with a `ROLE_PROMOTED` audit event. The app reads the role from `public."User"` on every request. The owner still needs to sign in and confirm that `/admin` opens.
+
+## 2026-11-06 — Visual redesign: "evidence label" direction
+
+- New palette across the app (warm paper, black ink, lime scan signal; dark theme to match) via the tokens in `src/app/redesign.css`; fonts Bricolage Grotesque (display), Instrument Sans (body), JetBrains Mono (labels) through `next/font`.
+- Home page rebuilt (`src/components/landing.tsx`, `src/app/landing.css`) with a different scroll animation per section: hero line rise and highlighter, two-way ticker band, pinned "three steps" sequence with rolling counter (wide screens), dealt verdict cards with stamp-in, coupon flip and route-drawing map, sliding FAQ, scroll-linked outline text and page progress bar.
+- `src/components/motion.ts` drives reveals and scroll progress; hidden start states only apply while JavaScript motion is active. Reduced motion (OS setting or in-app toggle) shows everything static.
+- Hero illustration replaced with an "evidence tag" (`scan-scene.tsx`), also used on sign-in and overview. It is labelled as an illustration; no real codes or results.
+- Checked: lint, types, 52 tests, production build; desktop, 375 px mobile, dark theme in the browser. New copy has no Urdu translation yet (falls back to English).
